@@ -1,8 +1,14 @@
 #!/bin/bash
 
-if [ "${SINGULARITY_NAME}" != "el7:x86_64" ]; then
+CMSSW_EL7=/cvmfs/cms.cern.ch/common/cmssw-el7
+
+if [ "${SINGULARITY_NAME:-${APPTAINER_NAME:-}}" != "el7:x86_64" ]; then
     echo "Entering cmssw-el7..."
-    exec cmssw-el7 --command-to-run "/bin/bash" "$0" "$@"
+    if [ ! -x "${CMSSW_EL7}" ]; then
+        echo "ERROR: ${CMSSW_EL7} is unavailable; the CMS CVMFS repository must be mounted on the worker." >&2
+        exit 127
+    fi
+    exec "${CMSSW_EL7}" --command-to-run "/bin/bash" "$0" "$@"
 fi
 echo "Now in cmssw-el7!"
 echo "Command line: $0 $*"
