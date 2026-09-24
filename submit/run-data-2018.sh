@@ -14,6 +14,9 @@ NEVENT="$1"
 NTHREAD="$2"
 FILEIN="$3"
 FILEOUT="$4"
+filename=$(basename "$FILEOUT")
+mkdir tmp
+
 if [ -z "${FILEOUT}" ]; then
     FILEOUT="${FILEIN/MiniAODv2/CustomizedNanoAODv9}"
 fi
@@ -29,22 +32,30 @@ cd CMSSW_10_6_31/src
 cmsenv
 
 rm -rf PhysicsTools/NanoTuples
-git clone https://github.com/lyazj/hss-nano PhysicsTools/NanoTuples -b dev-part-UL
-PhysicsTools/NanoTuples/scripts/install_onnxruntime.sh
-wget https://coli.web.cern.ch/coli/tmp/.240120-181907_ak8_stage2/model.onnx -O $CMSSW_BASE/src/PhysicsTools/NanoTuples/data/InclParticleTransformer-MD/ak8/V02/model.onnx
+git clone https://github.com/hypnotismer/NanoTuples_run2 PhysicsTools/NanoTuples -b dev-ak15tagger-UL-finetune-xggg
+PhysicsTools/NanoTuples/submit/install_onnxruntime.sh
+wget https://coli.web.cern.ch/coli/tmp/.231117-195737_ak15_stage2/model.onnx -O $CMSSW_BASE/src/PhysicsTools/NanoTuples/data/InclParticleTransformer-MD/ak15/V02/model.onnx
+wget https://zkou.web.cern.ch/tmp/V02_xggg_finetune/model_opset11.onnx -O $CMSSW_BASE/src/PhysicsTools/NanoTuples/data/InclParticleTransformer-MD/ak15/V02_xggg_finetune/model_opset11.onnx
 scram b -j$(cat /proc/cpuinfo | grep MHz | wc -l)
 
+cd ../../tmp
+workdir=`pwd`
+path="$workdir/$filename"
+cd ..
+cd CMSSW_10_6_31/src
+
 cmsDriver.py \
-    --mc \
+    --data \
     -n "${NEVENT}" \
     --nThreads "${NTHREAD}" \
-    --python_filename run-mc-2017.py \
-    --eventcontent NANOAODSIM \
-    --datatier NANOAODSIM \
-    --conditions 106X_mc2017_realistic_v9 \
+    --python_filename run-data-2018.py \
+    --eventcontent NANOAOD \
+    --datatier NANOAOD \
+    --conditions 106X_dataRun2_v35 \
     --step NANO \
-    --era Run2_2017,run2_nanoAOD_106Xv2 \
-    --customise PhysicsTools/NanoTuples/nanoTuples_cff.nanoTuples_customizeMC \
+    --era Run2_2018,run2_nanoAOD_106Xv2 \
+    --customise PhysicsTools/NanoTuples/nanoTuples_cff.nanoTuples_customizeData \
     --filein "${FILEIN}" \
-    --fileout "${FILEOUT}" \
-    --customise_commands 'process.source.duplicateCheckMode = cms.untracked.string("noDuplicateCheck")' \
+    --fileout "${path}" \
+
+xrdcp --silent -p -f ${path} ${FILEOUT}

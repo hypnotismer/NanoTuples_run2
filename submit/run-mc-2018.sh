@@ -6,7 +6,7 @@ if [ -z "${HOME}" ]; then
     export HOME="$(pwd)"
 fi
 
-if [ $# -lt 3 ]; then
+if [ $# -lt 4 ]; then
     >&2 echo "usage: $(basename "$0") <nevent> <nthread> <file-in> <file-out>"
     exit 1
 fi
@@ -14,6 +14,13 @@ NEVENT="$1"
 NTHREAD="$2"
 FILEIN="$3"
 FILEOUT="$4"
+CUSTOMISE="PhysicsTools/NanoTuples/nanoTuples_cff.nanoTuples_customizeMC"
+if [[ "${FILEIN}" == *"ZRTo3Glu"* ]]; then
+    CUSTOMISE="PhysicsTools/NanoTuples/nanoTuples_cff.nanoTuples_customizeZRTo3Glu"
+fi
+filename=$(basename "$FILEOUT")
+mkdir tmp
+
 if [ -z "${FILEOUT}" ]; then
     FILEOUT="${FILEIN/MiniAODv2/CustomizedNanoAODv9}"
 fi
@@ -29,22 +36,31 @@ cd CMSSW_10_6_31/src
 cmsenv
 
 rm -rf PhysicsTools/NanoTuples
-git clone https://github.com/lyazj/hss-nano PhysicsTools/NanoTuples -b dev-part-UL
-PhysicsTools/NanoTuples/scripts/install_onnxruntime.sh
-wget https://coli.web.cern.ch/coli/tmp/.240120-181907_ak8_stage2/model.onnx -O $CMSSW_BASE/src/PhysicsTools/NanoTuples/data/InclParticleTransformer-MD/ak8/V02/model.onnx
+git clone https://github.com/hypnotismer/NanoTuples_run2 PhysicsTools/NanoTuples -b dev-ak15tagger-UL-finetune-xggg
+PhysicsTools/NanoTuples/submit/install_onnxruntime.sh
+wget https://coli.web.cern.ch/coli/tmp/.231117-195737_ak15_stage2/model.onnx -O $CMSSW_BASE/src/PhysicsTools/NanoTuples/data/InclParticleTransformer-MD/ak15/V02/model.onnx
+wget https://zkou.web.cern.ch/tmp/V02_xggg_finetune/model_opset11.onnx -O $CMSSW_BASE/src/PhysicsTools/NanoTuples/data/InclParticleTransformer-MD/ak15/V02_xggg_finetune/model_opset11.onnx
 scram b -j$(cat /proc/cpuinfo | grep MHz | wc -l)
+
+cd ../../tmp
+workdir=`pwd`
+path="$workdir/$filename"
+cd ..
+cd CMSSW_10_6_31/src
 
 cmsDriver.py \
     --mc \
     -n "${NEVENT}" \
     --nThreads "${NTHREAD}" \
-    --python_filename run-mc-2016.py \
+    --python_filename run-mc-2018.py \
     --eventcontent NANOAODSIM \
     --datatier NANOAODSIM \
-    --conditions 106X_mcRun2_asymptotic_v17 \
+    --conditions 106X_upgrade2018_realistic_v16_L1v1 \
     --step NANO \
-    --era Run2_2016,run2_nanoAOD_106Xv2 \
-    --customise PhysicsTools/NanoTuples/nanoTuples_cff.nanoTuples_customizeMC \
+    --era Run2_2018,run2_nanoAOD_106Xv2 \
+    --customise "${CUSTOMISE}" \
     --filein "${FILEIN}" \
-    --fileout "${FILEOUT}" \
+    --fileout "${path}" \
     --customise_commands 'process.source.duplicateCheckMode = cms.untracked.string("noDuplicateCheck")' \
+
+xrdcp --silent -p -f ${path} ${FILEOUT}

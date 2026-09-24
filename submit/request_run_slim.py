@@ -22,7 +22,7 @@ if len(sys.argv) < 3 or len(sys.argv) > 6:
     sys.exit(0)
 
 def generate_x509up(x509up=None):
-    x509up = x509up or os.path.abspath(os.path.join(basedir, 'scripts', 'x509up'))
+    x509up = x509up or os.path.abspath(os.path.join(basedir, 'submit', 'x509up'))
     if os.popen("2>/dev/null voms-proxy-info --file '%s'" % x509up).read().find('timeleft  : 191') < 0:
         if os.system("voms-proxy-init -voms cms -valid 192:00 -out '%s'" % x509up):
             raise RuntimeError('error generating x509 user proxy')
@@ -31,12 +31,6 @@ def generate_x509up(x509up=None):
 def eos_to_xrd(path):
     if path[:4] == '/eos': return 'root://eosuser.cern.ch/' + path
     return path
-
-def local_output_dataset(filein, dataset):
-    if not os.path.isabs(filein):
-        return dataset
-    parent = os.path.basename(os.path.dirname(filein))
-    return parent or dataset
 
 def check_success(fileout, nevents):
     #os.system("touch '%s'" % fileout)
@@ -102,19 +96,18 @@ Queue NEVENT, FILEIN, FILEOUT, LOGPREFIX from (
             raise RuntimeError('year not recognized in prepid: %s' % prepid)
     if not outdir:
         user = __import__('getpass').getuser()
-        outdir = f'root://cceos.ihep.ac.cn:1094//store/user/{user}/CustomizedNanoAOD/V0/{year}/{"Data" if isdata else "MC"}'
-    executable = os.path.abspath(os.path.join(basedir, 'scripts', 'x509run'))
+        outdir = f'root://cceos.ihep.ac.cn:1094//store/user/{user}/CustomizedNanoAOD-slim/V0/{year}/{"Data" if isdata else "MC"}'
+    executable = os.path.abspath(os.path.join(basedir, 'submit', 'x509run'))
     x509up = generate_x509up()
-    prog = os.path.abspath(os.path.join(basedir, 'scripts', f'run-{"data" if isdata else "mc"}-{year}.sh'))
-    outbase = outdir
-    logdir = os.path.join(basedir, 'scripts', 'log', dataset, prepid)
+    prog = os.path.abspath(os.path.join(basedir, 'submit', f'run-{"data" if isdata else "mc"}-{year}-slim.sh'))
+    outdir = os.path.join(outdir, dataset, prepid)
+    logdir = os.path.join(basedir, 'submit', 'log', dataset, prepid)
     if os.system("mkdir -p '%s'" % logdir):
         raise RuntimeError('error making directories')
     queue = ''
     for nevents, filein in sample.select(target_nevents):
         filename = os.path.basename(filein)
-        output_dataset = local_output_dataset(filein, dataset)
-        fileout = os.path.join(outbase, output_dataset, prepid, filename.replace('MiniAODv2', 'CustomizedNanoAODv9'))
+        fileout = os.path.join(outdir, filename.replace('MiniAODv2', 'CustomizedNanoAODv9'))
         #success = check_success(fileout, nevents)
         success = False
         print('%s %s' % (('Skipping' if success else 'Adding'), fileout))

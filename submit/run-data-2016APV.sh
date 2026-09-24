@@ -30,7 +30,7 @@ cmsenv
 
 rm -rf PhysicsTools/NanoTuples
 git clone https://github.com/lyazj/hss-nano PhysicsTools/NanoTuples -b dev-ak15tagger-UL
-PhysicsTools/NanoTuples/scripts/install_onnxruntime.sh
+PhysicsTools/NanoTuples/submit/install_onnxruntime.sh
 wget https://coli.web.cern.ch/coli/tmp/.231117-195737_ak15_stage2/model.onnx -O $CMSSW_BASE/src/PhysicsTools/NanoTuples/data/InclParticleTransformer-MD/ak15/V02/model.onnx
 scram b -j$(cat /proc/cpuinfo | grep MHz | wc -l)
 
@@ -38,12 +38,12 @@ cmsDriver.py \
     --data \
     -n "${NEVENT}" \
     --nThreads "${NTHREAD}" \
-    --python_filename run-data-2017.py \
+    --python_filename run-data-2016APV.py \
     --eventcontent NANOAOD \
     --datatier NANOAOD \
     --conditions 106X_dataRun2_v35 \
     --step NANO \
-    --era Run2_2017,run2_nanoAOD_106Xv2 \
+    --era Run2_2016_HIPM,run2_nanoAOD_106Xv2 \
     --customise PhysicsTools/NanoTuples/nanoTuples_cff.nanoTuples_customizeData \
     --filein "${FILEIN}" \
     --fileout "${FILEOUT}" \
