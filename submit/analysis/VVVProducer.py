@@ -70,13 +70,8 @@ class VVVProducer(Module):
                 self.leptons.append(TLorentzVector())
                 self.leptons[-1].SetPtEtaPhiM(muons[iMuon].pt, muons[iMuon].eta, muons[iMuon].phi, muons[iMuon].mass)
 
-        # Check fatjet condition: at least one AK15Puppi with subJetIdx1>=0 and subJetIdx2>=0
-        ak15Jets = Collection(event, "AK15Puppi")
-        hasFatjet = False
-        for ak15Jet in ak15Jets:
-            if ak15Jet.subJetIdx1 >= 0 and ak15Jet.subJetIdx2 >= 0:
-                hasFatjet = True
-                break
+        # Require at least one AK15Puppi. Subjet indices are not required.
+        hasFatjet = event.nAK15Puppi > 0
 
         # Get MET
         met_pt = event.MET_pt
